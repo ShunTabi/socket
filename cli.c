@@ -1,40 +1,44 @@
 #include <stdio.h>
 #include <winsock2.h>
-//gcc cli.c -o cli -lws2_32 -finput-charset=UTF-8 -fexec-charset=CP932
-
-//★socket()
-//★connect()
-//★read()/write()
-//★close()
+#include <ws2tcpip.h>
 
 int main()
 {
-    printf("CLIENT\n");
-    WSADATA wsaData;
-    struct sockaddr_in si;
-    int server_d;
-    char buf[32];
-    //winsock2の初期化
-    WSAStartup(MAKEWORD(2, 0), &wsaData);
-    //socketの作成
-    server_d = socket(AF_INET, SOCK_STREAM, 0);
-    //接続先指定用構造体の準備
-    si.sin_family = AF_INET;
-    si.sin_port = htons(8080);
-    si.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
-    //Serverに接続
-    connect(server_d, (struct sockaddr *)&si, sizeof(si));
-    //Serverへ送信
-    // char snum[200];
-    // puts("送信データを入れてください...");
-    // fgets(snum, sizeof(snum), stdin);
-    // send(server_d, snum, strlen(snum), 0);
-    //Serverからデータを受信
-    // recv(server_d, snum, 200, 0);
-    memset(buf, 0, sizeof(buf));
-    int n = recv(server_d, buf, sizeof(buf), 0);
-    printf("文字数　　：%s\n", buf);
-    //winsock2の終了処理
+    printf("■CLIENT\n");
+    /* IP アドレス、ポート番号、ソケット */
+    char ip[80];
+    unsigned short port = 8080;
+    int dstSocket;
+    /* sockaddr_in 構造体 */
+    struct sockaddr_in dstAddr;
+    /* 各種パラメータ */
+    int status;
+    int numsnt;
+    char *toSendText = "Hello World!";
+    /* Windows 独自の設定 */
+    WSADATA data;
+    WSAStartup(MAKEWORD(2, 0), &data);
+    /* 相手先アドレスの入力 */
+    printf("Connect to ? : (name or IP address) ");
+    scanf("%s", ip);
+    /* sockaddr_in 構造体のセット */
+    memset(&dstAddr, 0, sizeof(dstAddr));
+    dstAddr.sin_port = htons(port);
+    dstAddr.sin_family = AF_INET;
+    dstAddr.sin_addr.s_addr = inet_addr(ip);
+    /* ソケット生成 */
+    dstSocket = socket(AF_INET, SOCK_STREAM, 0);
+    /* 接続 */
+    printf("Trying to connect to %s: \n", ip);
+    connect(dstSocket, (struct sockaddr *)&dstAddr, sizeof(dstAddr));
+    /* パケット送出 */
+    for (int i = 0; i < 5; i++)
+    {
+        printf("sending...\n");
+        send(dstSocket, toSendText, strlen(toSendText) + 1, 0);
+        Sleep(1000);
+    }
+    /* Windows 独自の設定 */
+    closesocket(dstSocket);
     WSACleanup();
-    return 0;
 }

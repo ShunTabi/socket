@@ -1,56 +1,53 @@
+
 #include <stdio.h>
 #include <winsock2.h>
+#include <ws2tcpip.h>
 
-//★socket()
-//★bind()
-//★listen()
-//★accept()
-//★read()
-//★write()
-//★close()
+#define BUFFER_SIZE 256
 
 int main()
 {
-    printf("SERVER\n");
-    WSADATA wsaData;
-    struct sockaddr_in addr;
-    struct sockaddr_in client;
-    int len;
-    int listener_d;
-    int sock;
-    //winsock2の初期化
-    WSAStartup(MAKEWORD(2, 0), &wsaData);
-    //socketの作成
-    listener_d = socket(AF_INET, SOCK_STREAM, 0);
-    //socketの設定
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(8080);
-    addr.sin_addr.S_un.S_addr = INADDR_ANY;
-    bind(listener_d, (struct sockaddr *)&addr, sizeof(addr));
-    //TCP CLIENTからの接続要求を待っている状態にする。
-    listen(listener_d, 5);
-    puts("接続を待機しています...");
-    //TCP CLIENTからの要求を受け付ける。
-    len = sizeof(client);
-    sock = accept(listener_d, (struct sockaddr *)&client, &len);
-    if (sock == INVALID_SOCKET)
+    printf("■SERVER\n");
+    /* ポート番号、ソケット */
+    unsigned short port = 8080;
+    int srcSocket; // 自分
+    int dstSocket; // 相手
+    /* sockaddr_in 構造体 */
+    struct sockaddr_in srcAddr;
+    struct sockaddr_in dstAddr;
+    int dstAddrSize = sizeof(dstAddr);
+    /* 各種パラメータ */
+    int numrcv;
+    char buffer[BUFFER_SIZE];
+    /* Windows 独自の設定 */
+    WSADATA data;
+    WSAStartup(MAKEWORD(2, 0), &data);
+    /* sockaddr_in 構造体のセット */
+    memset(&srcAddr, 0, sizeof(srcAddr));
+    srcAddr.sin_port = htons(port);
+    srcAddr.sin_family = AF_INET;
+    srcAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    /* ソケットの生成 */
+    srcSocket = socket(AF_INET, SOCK_STREAM, 0);
+    /* ソケットのバインド */
+    bind(srcSocket, (struct sockaddr *)&srcAddr, sizeof(srcAddr));
+    /* 接続の許可 */
+    listen(srcSocket, 1);
+    /* 接続の受付け */
+    printf("Waiting for connection ...\n");
+    dstSocket = accept(srcSocket, (struct sockaddr *)&dstAddr, &dstAddrSize);
+    printf("Connected from %s\n", inet_ntoa(dstAddr.sin_addr));
+    /* パケット受信 */
+    while (1)
     {
-        printf("socket failed\n");
-        return 1;
+        numrcv = recv(dstSocket, buffer, BUFFER_SIZE, 0);
+        if (numrcv == 0 || numrcv == -1)
+        {
+            closesocket(dstSocket);
+            break;
+        }
+        printf("received: %s\n", buffer);
     }
-    else
-    {
-        puts("接続しました");
-        char *msg = "Hello! Welcome my Program!!\n";
-        //5文字送信
-        send(sock, msg, strlen(msg), 0);
-        puts("接続を終了します。");
-    }
-    //Error処理
-    //TCPセッションの終了
-    closesocket(sock);
-    // winsock2の終了処理
+    /* Windows 独自の設定 */
     WSACleanup();
-
-    return 0;
 }
